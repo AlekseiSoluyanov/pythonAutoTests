@@ -1,0 +1,7 @@
+tst: /home/user/tst
+out: /home/user/out
+folder1: /home/user/folder1
+folder2: /home/user/folder2
+stat: /home/user/PycharmProjects/pythonAutoTests/7zipAutoTests
+bs: 1M
+count: 5
