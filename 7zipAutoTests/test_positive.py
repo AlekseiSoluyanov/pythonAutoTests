@@ -1,7 +1,6 @@
 import yaml
 
-from checkers import checkout, getout
-
+from checkers import ssh_getout, ssh_checkout, getout
 
 with open('config.yaml') as f:
     data = yaml.safe_load(f)
@@ -9,59 +8,89 @@ with open('config.yaml') as f:
 
 class TestPositive:
 
-    def test_step1(self, clear_folders, make_files):
+    def save_log(self, start_time, name):
+        with open(name, 'a') as f:
+            f.write(ssh_getout("0.0.0.0", "user2", "11", "journalctl --since {}".format(start_time)))
+
+    def test_step1(self, clear_folders, make_files, start_time):
         # test1
-        result1 = checkout("cd {}; 7z a {}/arx2".format(data["tst"], data["out"]), "Everything is Ok")
-        result2 = checkout("cd {}; ls".format(data["out"]), "arx2.7z")
+        result1 = ssh_checkout("0.0.0.0", "user2", "11", "cd {}; 7z a {}/arx2".format(data["tst"],
+                                                                                      data["out"]), "Everything is Ok")
+        result2 = ssh_checkout("0.0.0.0", "user2", "11", "cd {}; ls".format(data["out"]), "arx2.7z")
+        self.save_log(start_time, "stat.txt")
         assert result1 and result2, "test1 FAIL"
 
-    def test_step2(self, clear_folders, make_files):
+    def test_step2(self, clear_folders, make_files, start_time):
         # test2
         res = []
-        res.append(checkout("cd {}; 7z a {}/arx2".format(data["tst"], data["out"]), "Everything is Ok"))
-        res.append(checkout("cd {}; 7z e arx2.7z -o{} -y".format(data["out"], data["folder1"]), "Everything is Ok"))
+        res.append(ssh_checkout("0.0.0.0", "user2", "11", "cd {}; 7z a {}/arx2".format(data["tst"],
+                                                                                       data["out"]),
+                                "Everything is Ok"))
+        res.append(ssh_checkout("0.0.0.0", "user2", "11", "cd {}; 7z e arx2.7z -o{} -y".format(data["out"],
+                                                                                               data["folder1"]),
+                                "Everything is Ok"))
         for item in make_files:
-            res.append(checkout("cd {}; ls".format(data["folder1"]), item))
+            res.append(ssh_checkout("0.0.0.0", "user2", "11", "cd {}; ls".format(data["folder1"]), item))
+        self.save_log(start_time, "stat.txt")
         assert all(res), "test2 FAIL"
 
-    def test_step3(self):
+    def test_step3(self, start_time):
         # test3
-        assert checkout("cd {}; 7z t arx2.7z".format(data["out"]), "Everything is Ok"), "test1 FAIL"
+        self.save_log(start_time, "stat.txt")
+        assert ssh_checkout("0.0.0.0", "user2", "11", "cd {}; 7z t arx2.7z".format(data["out"]),
+                            "Everything is Ok"), "test1 FAIL"
 
-    def test_step4(self):
+    def test_step4(self, start_time):
         # test4
-        assert checkout("cd {}; 7z u {}/arx2.7z".format(data["tst"], data["out"]), "Everything is Ok"), "test1 FAIL"
+        self.save_log(start_time, "stat.txt")
+        assert ssh_checkout("0.0.0.0", "user2", "11", "cd {}; 7z u {}/arx2.7z".format(data["tst"],
+                                                                                      data["out"]),
+                            "Everything is Ok"), "test1 FAIL"
 
-    def test_step5(self, clear_folders, make_files):
+    def test_step5(self, clear_folders, make_files, start_time):
         # test5
         res = []
-        res.append(checkout("cd {}; 7z a {}/arx2".format(data["tst"], data["out"]), "Everything is Ok"))
+        res.append(ssh_checkout("0.0.0.0", "user2", "11", "cd {}; 7z a {}/arx2".format(data["tst"],
+                                                                                       data["out"]),
+                                "Everything is Ok"))
         for item in make_files:
-            res.append(checkout("cd {}; 7z l arx2.7z".format(data["out"], data["folder1"]), item))
+            res.append(
+                ssh_checkout("0.0.0.0", "user2", "11", "cd {}; 7z l arx2.7z".format(data["out"], data["folder1"]),
+                             item))
+        self.save_log(start_time, "stat.txt")
         assert all(res), "test5 FAIL"
 
-    def test_step6(self, clear_folders, make_files, make_subfolder):
+    def test_step6(self, clear_folders, make_files, make_subfolder, start_time):
         # test6
         res = []
-        res.append(checkout("cd {}; 7z a {}/arx".format(data["tst"], data["out"]), "Everything is Ok"))
-        res.append(checkout("cd {}; 7z x arx.7z -o{} -y".format(data["out"], data["folder2"]), "Everything is Ok"))
+        res.append(ssh_checkout("0.0.0.0", "user2", "11", "cd {}; 7z a {}/arx".format(data["tst"], data["out"]),
+                                "Everything is Ok"))
+        res.append(
+            ssh_checkout("0.0.0.0", "user2", "11", "cd {}; 7z x arx.7z -o{} -y".format(data["out"], data["folder2"]),
+                         "Everything is Ok"))
 
         for item in make_files:
-            res.append(checkout("ls {}".format(data["folder2"]), item))
+            res.append(ssh_checkout("0.0.0.0", "user2", "11", "ls {}".format(data["folder2"]), item))
 
-        res.append(checkout("ls {}".format(data["folder2"]), make_subfolder[0]))
-        res.append(checkout("ls {}/{}".format(data["folder2"], make_subfolder[0]), make_subfolder[1]))
+        res.append(ssh_checkout("0.0.0.0", "user2", "11", "ls {}".format(data["folder2"]), make_subfolder[0]))
+        res.append(ssh_checkout("0.0.0.0", "user2", "11", "ls {}/{}".format(data["folder2"], make_subfolder[0]),
+                                make_subfolder[1]))
+        self.save_log(start_time, "stat.txt")
         assert all(res), "test6 FAIL"
 
-    def test_step7(self, clear_folders, make_files):
+    def test_step7(self, clear_folders, make_files, start_time):
         # test7
         res = []
         for item in make_files:
-            res.append(checkout("cd {}; 7z h {}".format(data["tst"], item), "Everything is Ok"))
+            res.append(
+                ssh_checkout("0.0.0.0", "user2", "11", "cd {}; 7z h {}".format(data["tst"], item), "Everything is Ok"))
             hash = getout("cd {}; crc32 {}".format(data["tst"], item)).upper()
-            res.append(checkout("cd {}; 7z h {}".format(data["tst"], item), hash))
+            res.append(ssh_checkout("0.0.0.0", "user2", "11", "cd {}; 7z h {}".format(data["tst"], item), hash))
+        self.save_log(start_time, "stat.txt")
         assert all(res), "test8 FAIL"
 
-    def test_step8(self):
+    def test_step8(self, start_time):
         # test8
-        assert checkout("cd {}; 7z d arx.7z".format(data["out"]), "Everything is Ok"), "test8 FAIL"
+        self.save_log(start_time, "stat.txt")
+        assert ssh_checkout("0.0.0.0", "user2", "11", "cd {}; 7z d arx.7z".format(data["out"]),
+                            "Everything is Ok"), "test8 FAIL"
